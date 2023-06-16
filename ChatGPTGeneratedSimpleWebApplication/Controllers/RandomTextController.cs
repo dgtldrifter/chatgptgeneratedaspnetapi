@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ChatGPTGeneratedSimpleWebApplication.Controllers;
 
@@ -6,21 +8,21 @@ namespace ChatGPTGeneratedSimpleWebApplication.Controllers;
 [Route("[controller]")]
 public class RandomTextController : ControllerBase
 {
-    private static readonly List<string> StringHistory = new List<string>();
-    private static readonly Random Random = new Random();
     private const string Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-    // POST: /RandomText/GetRandomText
+    private static readonly BlockingCollection<string> StringHistory = new(new ConcurrentQueue<string>());
+
     [HttpPost("GetRandomText")]
     public ActionResult<string> GetRandomText()
     {
         var randomText = new string(Enumerable.Repeat(Chars, 10)
-            .Select(s => s[Random.Next(s.Length)]).ToArray());
+            .Select(s => s[RandomNumberGenerator.GetInt32(s.Length)]).ToArray());
+
         StringHistory.Add(randomText);
+
         return randomText;
     }
 
-    // GET: /RandomText/GetStringHistory/{int}
     [HttpGet("GetStringHistory/{count}")]
     public ActionResult<IEnumerable<string>> GetStringHistory(int count)
     {
@@ -29,7 +31,8 @@ public class RandomTextController : ControllerBase
             return BadRequest("Count must be greater than 0");
         }
 
-        return StringHistory.TakeLast(Math.Min(count, StringHistory.Count)).ToList();
+        return StringHistory.Take(Math.Min(count, StringHistory.Count)).ToList();
     }
+
 
 }
